@@ -2,14 +2,14 @@ name: Post Nord Pool prices to Telegram
 
 on:
   schedule:                 # run at 0-min of every 2nd hour (UTC)
-    - cron:  '*/5 * * * *'
+    - cron:  '0 8 * * *'
   workflow_dispatch:        # manual trigger button in Actions tab
 
 jobs:
   run:
     runs-on: ubuntu-latest
 
-    env:                     # pass secrets to the job
+    env:
       TG_BOT_TOKEN:  ${{ secrets.TG_BOT_TOKEN }}
       TG_CHANNEL_ID: ${{ secrets.TG_CHANNEL_ID }}
 
