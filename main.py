@@ -43,9 +43,9 @@ avg_30d  = past_30d["€/kWh"].mean()
 # 2)  ──  BUILD THE MESSAGE TEXT  ───────────────────────────────────
 # ------------------------------------------------------------------
 msg = textwrap.dedent(f"""
-    ⚡ *Nord Pool spot prices* (Estonia)
+    ⚡ *Nord Pool electricity prices* (Estonia)
 
-    • 30-day average: *{avg_30d:.3f} €/kWh* ({avg_30d*100:.1f} c/kWh)
+    • 30-day average: ({avg_30d*100:.1f} c/kWh)
 
     • Incoming 24 h:
 """).strip()
