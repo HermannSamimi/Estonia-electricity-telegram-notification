@@ -1,11 +1,9 @@
 name: Post Nord Pool prices to Telegram
 
 on:
-  push:
-    branches: [main]
-  schedule:
-    - cron: '0 */2 * * *'
-  workflow_dispatch:
+  schedule:                 # run at 0-min of every 2nd hour (UTC)
+    - cron:  '*/5 * * * *'
+  workflow_dispatch:        # manual trigger button in Actions tab
 
 jobs:
   run:
