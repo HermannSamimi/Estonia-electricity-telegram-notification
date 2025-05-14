@@ -28,4 +28,4 @@ jobs:
           pip install -r requirements.txt
 
       - name: Run the price bot
-        run: python price_post.py
+        run: python main.py
