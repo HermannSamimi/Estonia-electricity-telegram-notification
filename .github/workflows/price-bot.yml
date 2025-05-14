@@ -1,0 +1,31 @@
+name: Post Nord Pool prices to Telegram
+
+on:
+  schedule:                 # run at 0-min of every 2nd hour (UTC)
+    - cron:  '0 */2 * * *'
+  workflow_dispatch:        # manual trigger button in Actions tab
+
+jobs:
+  run:
+    runs-on: ubuntu-latest
+
+    env:                     # pass secrets to the job
+      TG_BOT_TOKEN:  ${{ secrets.TG_BOT_TOKEN }}
+      TG_CHANNEL_ID: ${{ secrets.TG_CHANNEL_ID }}
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Run the price bot
+        run: python price_post.py
