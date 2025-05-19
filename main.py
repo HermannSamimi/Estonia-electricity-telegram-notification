@@ -1,3 +1,4 @@
+import matplotlib.pyplot as plt
 import os
 import requests
 import textwrap
@@ -15,7 +16,7 @@ TOKEN      = os.getenv("TG_BOT_TOKEN")        # or paste the string
 CHANNEL_ID = os.getenv("TG_CHANNEL_ID")       # "@mychannel"  or  "-1001234567890"
 
 # ------------------------------------------------------------------
-# 1)  ──  FETCH PRICES  ─────────────────────────────────────────────
+# ----  FETCH PRICES  ─────────────────────────────────────────────
 # (same logic you already have; shortened here for clarity)
 # ------------------------------------------------------------------
 EE_TZ  = ZoneInfo("Europe/Tallinn")
@@ -36,22 +37,52 @@ now_utc  = now_ee.astimezone(timezone.utc)
 
 past_30d = fetch(now_utc - timedelta(days=30), now_utc)
 next_24h = fetch(now_utc, now_utc + timedelta(hours=24))
+next_24h["hour_str"] = next_24h["dt_ee"].dt.strftime("%H:%M")
 
 avg_30d  = past_30d["€/kWh"].mean()
 
 # ------------------------------------------------------------------
-# 2)  ──  BUILD THE MESSAGE TEXT  ───────────────────────────────────
+# ──  BUILD THE VISUAL  ───────────────────────────────────
+# ------------------------------------------------------------------
+
+# Plot the next 24h prices
+fig, ax = plt.subplots(figsize=(10, 5))
+ax.plot(next_24h["hour_str"], next_24h["€/kWh"] * 100, marker='o')
+ax.set_title("Next 24h Electricity Prices (Estonia)", fontsize=14)
+ax.set_xlabel("Time")
+ax.set_ylabel("Price (cents/kWh)")
+ax.grid(True)
+
+# Annotate each point with the price value
+for x, y in zip(next_24h["hour_str"], next_24h["€/kWh"] * 100):
+    ax.annotate(f"{y:.1f}", xy=(x, y), xytext=(0, 5),
+                textcoords="offset points", ha='center', fontsize=8)
+
+# Rotate timestamps
+fig.autofmt_xdate()
+
+# Save to PNG
+img_path = "price_chart.png"
+plt.savefig(img_path, bbox_inches="tight")
+plt.close()
+
+# Fetch past 120 days to compute long-term average
+past_120d = fetch(now_utc - timedelta(days=120), now_utc)
+avg_120d  = past_120d["€/kWh"].mean()
+
+# ------------------------------------------------------------------
+# ──  BUILD THE MESSAGE TEXT  ───────────────────────────────────
 # ------------------------------------------------------------------
 msg = textwrap.dedent(f"""
-    ⚡ *Nord Pool electricity prices* (Estonia)
-
-    • 30-day average: ({avg_30d*100:.1f} c/kWh)
+    ⚡ Nord Pool electricity prices |Estonia|
+    • 120-day average: ({avg_120d*100:.2f} c/kWh)  
+    • 30-day average: ({avg_30d*100:.2f} c/kWh)
 
     • Incoming 24 h:
 """).strip()
 
-for ts, price in next_24h.itertuples(index=False):
-    msg += f"\n    {ts:%d %b %H:%M} — {price:.3f} €/kWh"
+for hour, price in zip(next_24h["hour_str"], next_24h["€/kWh"]):
+    msg += f"\n    {hour} — {price*100:.3f} Cent/kWh"
 
 # Telegram MarkdownV2 needs special characters escaped (`_`, `-`, `.`, etc.).
 def escape_md(text: str) -> str:
@@ -66,10 +97,19 @@ payload = {
 }
 
 # ------------------------------------------------------------------
-# 3)  ──  SEND THE MESSAGE  ─────────────────────────────────────────
+# ──  SEND THE MESSAGE  ─────────────────────────────────────────
 # ------------------------------------------------------------------
 url = f"https://api.telegram.org/bot{TOKEN}/sendMessage"
 resp = requests.post(url, data=payload, timeout=30)
+# Send chart image to Telegram
+with open(img_path, "rb") as photo:
+    files = {"photo": photo}
+    data = {"chat_id": CHANNEL_ID, "caption": "📊 Price Trend for Next 24h"}
+    photo_url = f"https://api.telegram.org/bot{TOKEN}/sendPhoto"
+    photo_resp = requests.post(photo_url, data=data, files=files, timeout=30)
+    photo_resp.raise_for_status()
 resp.raise_for_status()          # raises if Telegram returns an error
 
-print("✅ Sent to Telegram")
+
+plt.show()                     # show the plot in a window
+print(msg)
